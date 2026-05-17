@@ -32,12 +32,12 @@ public interface TagRepository extends JpaRepository<Tag, String> {
      * Most used tags (top N).
      */
     @Query(value = """
-            SELECT t.*, COUNT(et.entry_id) as usage_count
+            SELECT t.name
             FROM tags t
             LEFT JOIN entry_tags et ON t.id = et.tag_id
             GROUP BY t.id, t.name
-            ORDER BY usage_count DESC
+            ORDER BY COUNT(et.entry_id) DESC
             LIMIT :limit
             """, nativeQuery = true)
-    List<Tag> findMostUsedTags(@Param("limit") int limit);
+    List<String> findMostUsedTags(@Param("limit") int limit);
 }
