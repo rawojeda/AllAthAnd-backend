@@ -4,9 +4,9 @@ import com.allathand.dto.CreateEntryDTO;
 import com.allathand.dto.UpdateEntryDTO;
 import com.allathand.entity.Entry;
 import com.allathand.entity.Tag;
+import com.allathand.exception.EntryNotFoundException;
 import com.allathand.repository.EntryRepository;
 import com.allathand.repository.TagRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -76,7 +76,7 @@ public class EntryService {
      */
     public Entry getById(String id) {
         return entryRepository.findByIdWithTags(id)
-                .orElseThrow(() -> new EntityNotFoundException("Entry not found: " + id));
+                .orElseThrow(() -> new EntryNotFoundException(id));
     }
 
     /**
@@ -152,7 +152,7 @@ public class EntryService {
     @Transactional
     public void delete(String id) {
         if (!entryRepository.existsById(id)) {
-            throw new EntityNotFoundException("Entry not found: " + id);
+            throw new EntryNotFoundException(id);
         }
         entryRepository.deleteById(id);
     }
