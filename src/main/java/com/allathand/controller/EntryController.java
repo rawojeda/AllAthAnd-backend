@@ -1,8 +1,8 @@
 package com.allathand.controller;
 
 import com.allathand.dto.CreateEntryDTO;
+import com.allathand.dto.EntryResponseDTO;
 import com.allathand.dto.UpdateEntryDTO;
-import com.allathand.entity.Entry;
 import com.allathand.service.EntryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class EntryController {
     private final EntryService entryService;
 
     @GetMapping
-    public Page<Entry> getAll(
+    public Page<EntryResponseDTO> getAll(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) List<String> tags,
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -32,7 +32,7 @@ public class EntryController {
     }
 
     @GetMapping("/search")
-    public Page<Entry> search(
+    public Page<EntryResponseDTO> search(
             @RequestParam String q,
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
@@ -40,7 +40,7 @@ public class EntryController {
     }
 
     @GetMapping("/language/{language}")
-    public Page<Entry> findByLanguage(
+    public Page<EntryResponseDTO> findByLanguage(
             @PathVariable String language,
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
@@ -60,18 +60,18 @@ public class EntryController {
     }
 
     @GetMapping("/{id}")
-    public Entry getById(@PathVariable String id) {
+    public EntryResponseDTO getById(@PathVariable String id) {
         return entryService.getById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Entry create(@Valid @RequestBody CreateEntryDTO dto) {
+    public EntryResponseDTO create(@Valid @RequestBody CreateEntryDTO dto) {
         return entryService.create(dto);
     }
 
     @PutMapping("/{id}")
-    public Entry update(@PathVariable String id, @RequestBody UpdateEntryDTO dto) {
+    public EntryResponseDTO update(@PathVariable String id, @RequestBody UpdateEntryDTO dto) {
         return entryService.update(id, dto);
     }
 

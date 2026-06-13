@@ -1,6 +1,7 @@
 package com.allathand.service;
 
 import com.allathand.dto.CreateEntryDTO;
+import com.allathand.dto.EntryResponseDTO;
 import com.allathand.dto.UpdateEntryDTO;
 import com.allathand.entity.Entry;
 import com.allathand.entity.Tag;
@@ -29,20 +30,21 @@ public class EntryService {
      * 
      * Avoid N+1 problem: fetch entries with tags in a single query.
      */
-    public Page<Entry> getAll(String search, List<String> tags, Pageable pageable) {
+    public Page<EntryResponseDTO> getAll(String search, List<String> tags, Pageable pageable) {
         boolean hasSearch = search != null && !search.isBlank();
         boolean hasTags = tags != null && !tags.isEmpty();
 
+        Page<Entry> result;
         if (hasSearch && hasTags) {
-            return entryRepository.searchEntriesByTags(search, tags, pageable);
+            result = entryRepository.searchEntriesByTags(search, tags, pageable);
+        } else if (hasSearch) {
+            result = entryRepository.searchEntries(search, pageable);
+        } else if (hasTags) {
+            result = entryRepository.findByTags(tags, pageable);
+        } else {
+            result = entryRepository.findAllWithTags(pageable);
         }
-        if (hasSearch) {
-            return entryRepository.searchEntries(search, pageable);
-        }
-        if (hasTags) {
-            return entryRepository.findByTags(tags, pageable);
-        }
-        return entryRepository.findAllWithTags(pageable);
+        return result.map(EntryResponseDTO::from);
     }
 
     /**
@@ -53,18 +55,18 @@ public class EntryService {
      * - Se aprovecha índices de PostgreSQL
      * - Retorna solo lo necesario
      */
-    public Page<Entry> search(String query, Pageable pageable) {
+    public Page<EntryResponseDTO> search(String query, Pageable pageable) {
         if (query == null || query.isBlank()) {
             return getAll(null, null, pageable);
         }
-        return entryRepository.searchEntries(query, pageable);
+        return entryRepository.searchEntries(query, pageable).map(EntryResponseDTO::from);
     }
 
     /**
      * Búsqueda por lenguaje de programación.
      */
-    public Page<Entry> findByLanguage(String language, Pageable pageable) {
-        return entryRepository.findByLanguageOrderByUpdatedAtDesc(language, pageable);
+    public Page<EntryResponseDTO> findByLanguage(String language, Pageable pageable) {
+        return entryRepository.findByLanguageOrderByUpdatedAtDesc(language, pageable).map(EntryResponseDTO::from);
     }
 
     /**
@@ -74,9 +76,8 @@ public class EntryService {
      * - LazyInitializationException si se accede a tags fuera de transacción
      * - N+1 query (1 query por tag)
      */
-    public Entry getById(String id) {
-        return entryRepository.findByIdWithTags(id)
-                .orElseThrow(() -> new EntryNotFoundException(id));
+    public EntryResponseDTO getById(String id) {
+        return EntryResponseDTO.from(findEntryById(id));
     }
 
     /**
@@ -89,7 +90,7 @@ public class EntryService {
      * 4. Guarda entry + tags (cascade=PERSIST lo maneja)
      */
     @Transactional
-    public Entry create(CreateEntryDTO dto) {
+    public EntryResponseDTO create(CreateEntryDTO dto) {
         Entry entry = new Entry();
         entry.setTitle(dto.getTitle());
         entry.setDescription(dto.getDescription() != null ? dto.getDescription() : "");
@@ -110,7 +111,7 @@ public class EntryService {
         }
         entry.setTags(tags);
 
-        return entryRepository.save(entry);
+        return EntryResponseDTO.from(entryRepository.save(entry));
     }
 
     /**
@@ -122,8 +123,8 @@ public class EntryService {
      * - Reemplaza completamente el set de tags
      */
     @Transactional
-    public Entry update(String id, UpdateEntryDTO dto) {
-        Entry entry = getById(id);
+    public EntryResponseDTO update(String id, UpdateEntryDTO dto) {
+        Entry entry = findEntryById(id);
 
         if (dto.getTitle() != null) entry.setTitle(dto.getTitle());
         if (dto.getDescription() != null) entry.setDescription(dto.getDescription());
@@ -143,7 +144,7 @@ public class EntryService {
             entry.setTags(tags);
         }
 
-        return entryRepository.save(entry);
+        return EntryResponseDTO.from(entryRepository.save(entry));
     }
 
     /**
@@ -180,5 +181,9 @@ public class EntryService {
     public List<String> getMostUsedTags(int limit) {
         return tagRepository.findMostUsedTags(limit);
     }
-}
 
+    private Entry findEntryById(String id) {
+        return entryRepository.findByIdWithTags(id)
+                .orElseThrow(() -> new EntryNotFoundException(id));
+    }
+}
